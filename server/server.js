@@ -22,6 +22,13 @@ app.use(session({
 }))
 app.use(cookieParser("secret"))
 
+app.use(passport.initialize())
+app.use(passport.session());
+require("./passportConfig")(passport);
+
+
+
+
 mongoose.connect('mongodb://localhost:27017/test-react-passport',
     {
         useNewUrlParser: true,
@@ -30,8 +37,18 @@ mongoose.connect('mongodb://localhost:27017/test-react-passport',
         console.log("Connected to DB")
     })
 
-app.post('/login', (req, res) => {
-    console.log(req.body)
+app.post('/login', (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+        if (err) throw err;
+        if (!user) res.send("User doesn't exist")
+        else {
+            req.login(user, err => {
+                if (err) throw err
+                res.send("Successful login")
+                console.log(req.user)
+            })
+        }
+    })(req, res, next)
 });
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
@@ -53,7 +70,7 @@ app.post('/register', async (req, res) => {
     }
 });
 app.get('/user', (req, res) => {
-    console.log(req.body)
+    res.send(req.user)
 });
 
 const PORT = process.env.PORT || 3001;
