@@ -104,30 +104,67 @@ app.post('/createSubscription', async (req, res) => {
     const user = await User.findOne({ username: req.user.username })
     if (!user) throw new Error("User not found.")
 
+    if (user.stripeId || user.type === "paid") throw new Error("User has already subscribed")
 
     const customer = await stripe.customers.create({
         email: user.email,
         source: req.body.source,
-        plan: process.env.STRIPE_PRICE_ID,
+        // plan: process.env.STRIPE_PRICE_ID,
         description: 'test customer'
     })
 
+    const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [
+            { price: process.env.STRIPE_PRICE_ID },
+        ],
+    });
+    console.log(subscription)
+
+    customer.subscriptions
+
     user.stripeId = customer.id;
     user.type = 'premium'
+    // user.subscription = subscription.id
     await user.save();
 
     console.log(user)
 
-
-    // const subscription = await stripe.subscriptions.create({
-    //     customer: customer.id,
-    //     items: [
-    //         { price: process.env.STRIPE_PRICE_ID },
-    //     ],
-    // });
-    // console.log(subscription)
-
     res.send(user.username)
+});
+
+app.post('/cancelSubscription', async (req, res) => {
+    console.log("===> in cancel subscription")
+    console.log(req.user.username)
+    console.log(req.body)
+    if (!req.user) throw new Error("Not authenticated.");
+
+    const user = await User.findOne({ username: req.user.username })
+    if (!user) throw new Error("User not found.")
+
+    if (!user.stripeId || !user.type === "paid") throw new Error("User has NOT subscribed")
+
+    const stripeCustomer = await stripe.customers.retrieve(user.stripeId, { expand: ['subscriptions'] })
+    console.log("===> Stripe Customer: ", stripeCustomer)
+
+    // TEST without saved subscription
+    const [sub] = stripeCustomer.subscriptions.data
+    console.log("===> Subscription retrieved: ", sub)
+
+    // const subId = user.subscription
+    // const sub = await stripe.subscriptions.retrieve(subId)
+    // console.log("===> Subscription retrieved: ", sub)
+
+    await stripe.subscriptions.del(sub.id)
+
+    await stripe.customers.deleteSource(user.stripeId, stripeCustomer.default_source)
+
+    user.type = "free"
+    user.stripeId = null
+    await user.save()
+
+    return user;
+
 });
 
 const PORT = process.env.PORT || 3001;

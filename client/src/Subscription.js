@@ -1,6 +1,7 @@
 import React from 'react'
 import StripeCheckout from 'react-stripe-checkout';
 import axios from 'axios'
+import CancelSubscription from './CancelSubscription'
 
 export default class Subscription extends React.Component {
     // createSubscription = (token) => {
@@ -33,12 +34,15 @@ export default class Subscription extends React.Component {
 
     render() {
         return (
-            <StripeCheckout
-                token={this.createSubscription}
-                // token={token => console.log(token)}
-                // description='test one'
-                stripeKey={process.env.REACT_APP_STRIPE_PUBLISHABLE}
-            />
+            <>
+                <StripeCheckout
+                    token={this.createSubscription}
+                    // token={token => console.log(token)}
+                    // description='test one'
+                    stripeKey={process.env.REACT_APP_STRIPE_PUBLISHABLE}
+                />
+                <CancelSubscription />
+            </>
         )
     }
 }

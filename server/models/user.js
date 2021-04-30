@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
     type: {
         type: String,
         default: 'free'
-    }
+    },
+    subscription: String
 })
 
 module.exports = mongoose.model('User', userSchema);
